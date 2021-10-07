@@ -1,0 +1,203 @@
+
+---
+title: "Homework Two"
+author: "Nelsha Athauda"
+date: "September 19, 2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## INFO 550 Assignment #3
+
+Aerosol Optical Depth (AOD) is the measure of aerosols in the atmosphere within a single measured column. Particulate Matter (PM) is an EPA Criteria air pollutant which causes adverse effects in cardiovascular and respiratory health. This script will be used to clean data and analyze the relationship between AOD and PM as measured by a novel sampler. 
+
+# Data Files and Packages
+
+Please set your working directory below
+```{R , include=FALSE, echo=FALSE}
+setwd("~/R/INFO 550")
+```
+
+Package Installation
+```{R Load Libraries, echo=F}
+# install.packages("tidyverse")
+# install.packages("lubridate")
+# install.packages("stringi")
+
+library(tidyverse)
+library(lubridate)
+library(stringi)
+```
+
+Data File Upload
+```{R Upload Files}
+raw_unit_91 <- read.csv(file ='Unit_91_Rawdata.csv')
+	head(raw_unit_91)
+	dim(raw_unit_91)
+#	View(raw_unit_91)
+	
+raw_unit_96 <- read.csv(file='Unit_96_Rawdata.csv')
+  head(raw_unit_96)
+	dim(raw_unit_96)
+#	View(raw_unit_96)
+```
+
+# Dataset Cleaning
+
+Removes fill numbers for each AOD wavelength. The sampler will leave a coded fill number instead an AOD value if the unit fails to lock on the sun, if it is nighttime, or if the triplicate measures are not identical.  
+
+```{R}
+# Removes all fill numbers and negative values
+raw_unit_91$aod_440[raw_unit_91$aod_440 < 0] <- NA
+raw_unit_91$aod_500[raw_unit_91$aod_500 < 0] <- NA
+raw_unit_91$aod_675[raw_unit_91$aod_675 < 0] <- NA
+raw_unit_91$aod_870[raw_unit_91$aod_870 < 0] <- NA
+
+raw_unit_91$plantower_pm25[raw_unit_91$plantower_pm25 < 0] <- NA
+
+raw_unit_96$aod_440[raw_unit_96$aod_440 < 0] <- NA
+raw_unit_96$aod_500[raw_unit_96$aod_500 < 0] <- NA
+raw_unit_96$aod_675[raw_unit_96$aod_675 < 0] <- NA
+raw_unit_96$aod_870[raw_unit_96$aod_870 < 0] <- NA
+
+raw_unit_96$plantower_pm25[raw_unit_96$plantower_pm25 < 0] <- NA
+
+# Creates usable datetime variables
+raw_unit_91$Date <- str_sub(raw_unit_91$timestamp, 1, 10)
+  head(raw_unit_91$Date) # Date only
+raw_unit_91$Lubri_Date <- ymd_hms(raw_unit_91$timestamp)
+  head(raw_unit_91$Lubri_Date) # Date and time
+  
+raw_unit_96$Date <- str_sub(raw_unit_96$timestamp, 1, 10)
+  head(raw_unit_96$Date) # Date only
+raw_unit_96$Lubri_Date <- ymd_hms(raw_unit_96$timestamp)
+  head(raw_unit_96$Lubri_Date) # Date and time
+```
+
+# Data Analysis
+
+Check if the four wavelengths the sampler utilizes to measure AOD are within range
+
+```{r}
+summary(raw_unit_91$aod_440)
+summary(raw_unit_91$aod_500)
+summary(raw_unit_91$aod_675)
+summary(raw_unit_91$aod_870)
+
+summary(raw_unit_96$aod_440)
+summary(raw_unit_96$aod_500)
+summary(raw_unit_96$aod_675)
+summary(raw_unit_96$aod_870)
+```
+
+
+
+```{R Graph 1}
+ggplot(data=raw_unit_91, aes(x=Lubri_Date, y=aod_440, group=1)) +
+  geom_point() +
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_440),],aes(x=Lubri_Date, y=aod_440))
+
+
+ggplot () +
+  geom_line(data=raw_unit_96[!is.na(raw_unit_96$aod_440),], 
+            aes(x = Lubri_Date, y = aod_440), color="darkgreen") +
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_440),], 
+            aes(x = Lubri_Date, y = aod_440), color="darkred")
+```
+The units sampling cycles didn't overlap much but we can see they are wildly different. 
+
+
+```{R Graph 2}
+ggplot(raw_unit_91, aes(x=Lubri_Date)) + 
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_440),], 
+            aes(y = aod_440, color ="AOD 440")) + 
+  geom_point(data=raw_unit_91[!is.na(raw_unit_91$aod_440),], 
+            aes(y = aod_440, color ="AOD 440")) + 
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_500),], 
+            aes(y = aod_500, color="AOD 500")) +
+  geom_point(data=raw_unit_91[!is.na(raw_unit_91$aod_500),], 
+            aes(y = aod_500, color="AOD 500")) +
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_675),], 
+            aes(y = aod_675, color="AOD 675")) +
+  geom_point(data=raw_unit_91[!is.na(raw_unit_91$aod_675),], 
+            aes(y = aod_675, color="AOD 675")) +
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$aod_870),], 
+            aes(y = aod_870, color="AOD 870")) +
+  geom_point(data=raw_unit_91[!is.na(raw_unit_91$aod_870),], 
+            aes(y = aod_870, color="AOD 870")) +
+  ggtitle("Unit 91 AOD Values by Wavelength - September 2021") +
+            xlab("Time") + ylab("AOD")
+```
+Unit 91 has well separated AOD channels
+
+```{r Graph 3}
+ggplot(raw_unit_96, aes(x=Lubri_Date)) + 
+  geom_line(data=raw_unit_96[!is.na(raw_unit_96$aod_440),], 
+            aes(y = aod_440, color ="AOD 440")) + 
+  geom_point(data=raw_unit_96[!is.na(raw_unit_96$aod_440),], 
+            aes(y = aod_440, color ="AOD 440")) + 
+  geom_line(data=raw_unit_96[!is.na(raw_unit_96$aod_500),], 
+            aes(y = aod_500, color="AOD 500")) +
+  geom_point(data=raw_unit_96[!is.na(raw_unit_96$aod_500),], 
+            aes(y = aod_500, color="AOD 500")) +
+  geom_line(data=raw_unit_96[!is.na(raw_unit_96$aod_675),], 
+            aes(y = aod_675, color="AOD 675")) +
+  geom_point(data=raw_unit_96[!is.na(raw_unit_96$aod_675),], 
+            aes(y = aod_675, color="AOD 675")) +
+  geom_line(data=raw_unit_96[!is.na(raw_unit_96$aod_870),], 
+            aes(y = aod_870, color="AOD 870")) +
+  geom_point(data=raw_unit_96[!is.na(raw_unit_96$aod_870),], 
+            aes(y = aod_870, color="AOD 870")) +
+  ggtitle("Unit 96 AOD Values by Wavelength - September 2021") +
+            xlab("Time") + ylab("AOD")
+```
+Unit 96 has wavelength channels that are crossing over causing incorrect AOD measurements
+
+
+
+```{r Graph 6}
+three_day_96_Subset <- subset(raw_unit_96, Date == c("2021-09-01", "2021-09-02", "2021-09-03", "2021-09-04"))
+dim(three_day_96_Subset)
+
+ggplot () +
+  geom_point(data=three_day_96_Subset[!is.na(three_day_96_Subset$plantower_pm25),], 
+            aes(x = Lubri_Date, y = plantower_pm25), color="darkred") +
+  geom_line(data=three_day_96_Subset[!is.na(three_day_96_Subset$plantower_pm25),], 
+            aes(x = Lubri_Date, y = plantower_pm25), color="red") +
+  geom_point(data=raw_unit_91[!is.na(raw_unit_91$plantower_pm25),], 
+            aes(x = Lubri_Date, y = plantower_pm25), color="darkblue") +
+  geom_line(data=raw_unit_91[!is.na(raw_unit_91$plantower_pm25),], 
+            aes(x = Lubri_Date, y = plantower_pm25), color="blue")
+```
+
+
+
+
+```{r Graph 7}
+Day_Match_91 <- subset(raw_unit_91, Date == c("2021-09-01", "2021-09-02", "2021-09-03", "2021-09-04") & aod_675 > 0)
+  dim(Day_Match_91)
+Day_Match_96 <- subset(raw_unit_96, Date == c("2021-09-01", "2021-09-02", "2021-09-03", "2021-09-04") & aod_675 > 0)
+  dim(Day_Match_96)
+  
+comb_Subs_91_96 <- rbind(Day_Match_91, Day_Match_96)
+  dim(comb_Subs_91_96)
+
+ggplot(data=comb_Subs_91_96, aes(x=aod_675, y=aod_675, group="dev_sn")) +
+  geom_point(aes(colour = factor(dev_sn)), size = 3) + 
+  geom_smooth(method='lm', size = 1)
+
+ggplot(data=comb_Subs_91_96, aes(x=aod_675, y=aod_675, group="dev_sn")) +
+  geom_point(aes(colour = factor(dev_sn)), size = 3) +
+  geom_smooth(method='lm',formula=comb_Subs_91_96$y.plot~data$x.plot)
+  
+```
+
+AOD values between units have zero agreement. Unit 96 needs to be realigned.
+
+
+
+
+
+
